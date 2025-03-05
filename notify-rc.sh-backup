@@ -1,0 +1,14 @@
+#!/bin/bash -x
+
+# Rocket.Chat webhook URL
+WEBHOOK_URL="https://onomonopia.savagegeek.net/hooks/644cbe70f3cf36b7511ae96d/TqD8cYgWHqXeyTTPrZSr235dkXccDmJhPNqrvz5c7DG7mYgp"
+
+# JSON payload for the message
+MESSAGE='{
+  "text": "Host: '$1'\nState: '$2'\nService: '$3'\nOutput: '$4'",
+  "username": "Centreon",
+  "icon_url": "https://clipground.com/images/png-logos-1.png"
+}'
+
+# Send the JSON payload to Rocket.Chat
+curl -X POST -H "Content-Type: application/json" -d "$MESSAGE" "$WEBHOOK_URL"

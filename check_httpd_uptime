@@ -1,0 +1,163 @@
+#!/bin/bash
+# ===================================================================================
+# FILE:         check_httpd_uptime
+# USAGE:
+# DESCRIPTION:  This returns the last time the httpd service was restarted.
+# OPTIONS:
+# REQUIREMENTS:
+# BUGS:
+# NOTES:
+# AUTHOR:       JD Henderson
+# COMPANY:      SavageGeek
+# VERSION:      1.0
+# CREATED:      2012-03-22 21:30
+# REVISION:     2012-00-00 00:00
+# ===================================================================================
+sIAM=`whoami`
+# if [ "$sIAM" != "root" ]; then   echo "You must be logged in as root to run this.";  exit 1;   fi
+cd ~
+CURRDIR="/usr/local/nagios/libexec"
+
+iDEBUG=1
+sSCRIPTNAME=`basename $0`
+sSCRIPTBASE=${sSCRIPTNAME%.*}
+sLOG="$CURRDIR/logs/$sSCRIPTBASE.log"
+INSTANCE=apache
+SERVICE=httpd
+SEARCH=root
+CURRENTAPP="/usr/sbin/httpd"
+iWARNING=40
+iCRITICAL=20
+
+######################################### FUNCTIONS ###############################################
+
+function printHelp() {
+  echo -e "
+
+$sSCRIPTNAME is a Nagios plugin to get check service for uptime
+
+$sSCRIPTNAME -c|--custcode [-V/--verbosity] [-W/--warning] [-C/--critical]
+
+Options:
+  --verbosity|-V)
+    Defines the log details. (0 being least, 2 being most)
+    Example: -V 1
+    Default: 0
+  --warning|-W)
+    Percent usage that a warning is issued
+    Example: -W 75
+    Default: $iWARNING
+  --critical|-C)
+    Percent usage that a critical is issued
+    Example: -C 85
+    Default: $iCRITICAL
+  --help|-H)
+    You're here."
+
+  exit 3
+}
+
+function setNow () {
+  iNOWSTAMP=`date +%s`                          # This stores date as number of seconds  in the local timezone
+  sNOWNICE=`date +"%Y-%m-%d %H:%M:%S"`          # This creates a nice string showing date and time
+  sNOWUTC=`date -u +%s`                         # This is a timestamp in UTC time zone
+  sNOWZONE=`date +"%Y-%m-%d %H:%M:%S %Z"`       # Time with Zone
+  sNOWFILE=`date +"%Y-%m-%d_%H%M%S%Z"`          # Time for file stamping
+}
+
+
+function isInteger() {
+#  if [ ! -n "$1" ]; then   return 1;   fi
+#  if [ "$1" -eq 0 ];  then  return 0;   fi
+#  echo "$1" | grep -E "^[0-9]+$" > /dev/null
+  if [[ "$1" =~ ^[0-9]+$ ]] ; then
+    return 0
+  fi
+  return 1
+}
+
+
+###################################### END OF FUNCTIONS ###########################################
+
+
+
+setNow
+sSTARTTIME=$sNOWNICE
+echo "$sSCRIPTNAME #####################################################################\n  STARTED:\t$sNOWNICE\t[ $iNOWSTAMP ]" >> $sLOG
+echo "  DEFAULT VARIABLES...\n    LOG:\t$sLOG\n    DEBUG:\t$iDEBUG\n    WARNING:\t$iWARNING\n    CRITICAL:\t$iCRITICAL" >> $sLOG
+
+while test -n "$1"; do
+  case "$1" in
+    --verbosity|-V)
+      if ! isVerbosity "$2";  then   exitHard 3 "ABORTED\t'$sSCRIPTNAME' because verbosity argument [ $2 ] invalid." $sLOG;  fi
+      iDEBUG=$2;   shift;   ;;
+    --warning|-W)
+      if ! isInteger "$2"; then   exitHard 3 "ABORTED\t'$sSCRIPTNAME' because warning argument [ $2 ] is not an integer." $sLOG;  fi
+      iWARNING=$2;   shift;   ;;
+    --critical|-C)
+      if ! isInteger "$2"; then   exitHard 3 "ABORTED\t'$sSCRIPTNAME' because critical argument [ $2 ] is not an integer." $sLOG;  fi
+      iCRITICAL=$2;   shift;   ;;
+    --help|-H)          printHelp;   exit 3;   ;;
+    *)                  exitHard 3 "UNKNOWN Unknown argument (-H for help)" $sLOG;   ;;
+  esac
+  shift
+done
+
+
+
+
+
+################################################  GUTS  ##########################################
+
+sRESULT=
+sNAGTEXT='OK'
+iSTATUS=0
+iRESULT=0
+APP=1
+
+if [ $APP -eq 1 ]; then
+    sDATEEXTRACT=`ps -ef | grep /usr/sbin/httpd | grep root | grep -v grep | awk '{print $5}'`
+    iSTATUS=$?
+    iSTAMP=`date --date "$sDATEEXTRACT" +"%s"`
+    iRESULT=$((iNOWSTAMP-iSTAMP))
+else
+    if [ -e "$CURRENTAPP" ] ; then
+    iRESULT=`service $SERVICE status | awk '{print $5}'`
+    iSTATUS=$?
+fi
+fi
+
+# if [ -e "$iRESULT" ] then echo "CONTINUE\t'$sSCRIPTNAME' We should be cooking with gas, ok to continue." >> $sLOG;  fi
+
+# if [ $iSTATUS -ne 0 ]; then  exit echo  "ABORTED - '$sSCRIPTNAME' because unable to determine time up." $sLOG;    fi
+
+iMINSUP=$(($iRESULT/60))
+iHRSUP=$(($iMINSUP/60))
+iDAYSUP=$(($iHRSUP/24))
+
+echo "  SECSUP:   $iRESULT\n  MINSUP:     $iMINSUP\n  HRSUP:      $iHRSUP\n  DAYSUP:      $iDAYSUP\n  WARNING:    $iWARNING\n  CRITICAL:  $iCRITICAL" >> $sLOG
+
+echo " $SERVICE was last restarted $iMINSUP minutes ago: $iMINSUP|uptime=$iMINSUP;$iWARNING;$iCRITICAL;0"
+
+ if [ $iMINSUP -lt $iCRITICAL ]; then
+    iSTATUS=2
+    sNAGTEXT="CRITICAL - $SERVICE was restarted $iMINSUP minutes ago which is more recent that the critical threshold ( $iCRITICAL )."
+	exit 2
+  elif [ $iMINSUP -lt $iWARNING ]; then
+    iSTATUS=1
+    sNAGTEXT="WARNING - $SERVICE was restarted $iMINSUP minutes ago which is more recent than the warning threshold ( $iWARNING )."
+	exit 1
+  else
+    iSTATUS=0
+    sNAGTEXT="OK - $SERVICE was last started $iMINSUP minutes ago which is beyond the established warning/critical thresholds [$iWARNING/$iCRITICAL]."
+	exit 0
+  fi
+  sNAGRESULT="$sNAGTEXT...SecsUp=$sRESULT, MinsUp=$iMINSUP, HrsUp=$iHRSUP, DaysUp=$iDAYSUP|DaysUp=$iDAYSUP"
+  echo "  NAGREULT:       $sNAGRESULT" >> $sLOG
+
+setNow
+iDURATION=`datediff -s "$sSTARTTIME" "$sNOWNICE"`
+echo "  COMPLETED:\t$sNOWNICE\t[ $iNOWSTAMP ]\n  DURATION:\t$iDURATION" >> $sLOG
+
+echo "$sNAGRESULT"
+exit 0

@@ -1,0 +1,43 @@
+#!/bin/bash -x
+
+#
+#
+#  NOTE That this is all of the macros for NAGIOS to use
+# https://assets.nagios.com/downloads/nagioscore/docs/nagioscore/3/en/macrolist.html
+#
+#
+# Rocket.Chat webhook URL
+#
+# Old WebHook from Onomonopia
+#:wq!
+# WEBHOOK_URL="https://onomonopia.savagegeek.net/hooks/644cbe70f3cf36b7511ae96d/TqD8cYgWHqXeyTTPrZSr235dkXccDmJhPNqrvz5c7DG7mYgp"
+
+WEBHOOK_URL="https://onomonopia.savagegeek.net/hooks/65af309a786b0b02c77e67ff/nwW5ijqrhy3nqLD6TLz6QGyFatPABtdmFQhTaYoLsvy9c89t"
+
+# JSON payload for the message
+
+MESSAGE='{
+  "text": "\n\n \n\n:drpepper: *Check Your Chit!!* :medmari:\n:point_right: [Monitoring Link](http://sg-centreon-01.savagegeek.com) :point_left: \nHost: '$1'\n\nService: `'$4'`\n\nAddress: '$7'\nHostState: '$2'\n\n\nServiceState: *'$5'*\nOutput: `'$6'`\n",
+  "username": "Centreon",
+  "icon_url": "https://clipground.com/images/png-logos-1.png"
+}'
+
+
+#MESSAGES=(
+#  '{ "text": ":question: *Service Monitoring for SavageGeek* :question:",
+#   "username": "Centreon",
+#   "icon_url": "https://clipground.com/images/png-logos-1.png" }'
+  
+#  '{ "text": "Host: '$1'\nState: '$2'\nOutput: '$3'\n\n\nService: '$4'\nState: '$5'\nOutput: *'$6'*",
+#     "username": "Centreon",
+#     "icon_url": "https://clipground.com/images/png-logos-1.png" }'
+#)
+
+# Send the JSON payload to Rocket.Chat
+# Loop through the array of messages and send each one test
+
+#for MESSAGE in "${MESSAGES[@]}"; do
+
+    curl -X POST -H "Content-Type: application/json" -d "$MESSAGE" "$WEBHOOK_URL"
+
+#done

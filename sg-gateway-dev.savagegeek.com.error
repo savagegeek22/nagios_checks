@@ -1,0 +1,7 @@
+verify depth is 6
+depth=2 C = US, O = Internet Security Research Group, CN = ISRG Root X1
+verify return:1
+depth=1 C = US, O = Let's Encrypt, CN = R3
+verify return:1
+depth=0 CN = sg-gateway-dev.savagegeek.com
+verify return:1
