@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# This script is intended to get the java heap for Confluence
+
+JMAPFILE="/usr/local/nagios/results/jmap-tmp.oxapp.result"
+OWNER=497
+
+
+>"$JMAPFILE"
+
+## BELOW LINE EXPLAINED...
+
+# ps -ef:           Lists all running processes with details.
+# grep java:        Filters for processes related to java.
+# grep $OWNER:      Further filters for processes owned by $OWNER (a variable that should hold a username).
+# grep server:      Further filters for processes containing the word server (to narrow down Java processes related to a server).
+# grep -v grep:     Excludes the grep command itself from the results.
+# awk '{print $2}': Extracts the Process ID (PID) from the second column of the output.
+# --
+# Purpose: This command finds the process ID (PID) of a Java process that belongs to $OWNER and is running a server-related Java application.
+
+PROCID=`ps -ef | grep java | grep $OWNER | grep server | grep -v grep | awk '{print $2}'`
+
+
+## BELOW LINE EXPLAINED...
+
+# /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.181.x86_64/bin/jstat -gcutil "$PROCID" 750 1:
+  # jstat -gcutil "$PROCID" 750 1:
+    # Runs jstat, a Java tool to monitor garbage collection (GC) statistics.
+    # -gcutil: Shows GC utilization metrics.
+    # "$PROCID": Specifies the PID of the Java process found earlier.
+    # 750 1: Collects GC stats every 750 milliseconds, just once.
+# sed -n '2p': Extracts the second line of the output (since the first line is usually a header).
+# awk '{print $4}': Extracts the fourth column of the second-line output, 
+  #  which corresponds to one of the GC metrics (e.g., S0, S1, E, O, M, CCS, or YGC, depending on Java version).
+# > "$JMAPFILE": Saves the extracted value into a file whose name is stored in the variable $JMAPFILE.
+# --Purpose: This command captures and saves a specific GC metric (related to heap usage or old-generation memory) from the Java process and writes it to a file.
+
+/usr/lib/jvm/java-1.7.0-openjdk-1.7.0.181.x86_64/bin/jstat -gcutil "$PROCID" 750 1 | sed -n '2p' | awk '{print $4}' > "$JMAPFILE"
+
